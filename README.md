@@ -170,6 +170,15 @@ cargo test
 solana program deploy target/deploy/counter_program.so
 ```
 
+### 6. Upload IDL 
+
+```bash
+solana address -k target/deploy/counter_program-keypair.json
+
+npx @solana-program/program-metadata@latest write idl <progam-id>  ./idl.json
+```
+
+
 ## 📚 Codama Macros
 
 This project uses Codama derive macros for automatic IDL generation:
