@@ -1,0 +1,14 @@
+{
+  "idl": "./idl.json",
+  "scripts": {
+    "js": [
+      { "from": "@codama/renderers-js", "args": ["./clients/js/src/generated"] }
+    ],
+    "rust": [
+      {
+        "from": "@codama/renderers-rust",
+        "args": ["./clients/rust", { "crateFolder": "src" }]
+      }
+    ]
+  }
+}

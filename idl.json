@@ -1,0 +1,151 @@
+{
+  "additionalPrograms": [],
+  "kind": "rootNode",
+  "program": {
+    "accounts": [
+      {
+        "data": {
+          "fields": [
+            {
+              "kind": "structFieldTypeNode",
+              "name": "count",
+              "type": {
+                "endian": "le",
+                "format": "u64",
+                "kind": "numberTypeNode"
+              }
+            }
+          ],
+          "kind": "structTypeNode"
+        },
+        "kind": "accountNode",
+        "name": "counterAccount"
+      }
+    ],
+    "definedTypes": [],
+    "errors": [
+      {
+        "code": 0,
+        "kind": "errorNode",
+        "message": "Invalid instruction data provided",
+        "name": "invalidInstructionData"
+      },
+      {
+        "code": 1,
+        "kind": "errorNode",
+        "message": "Counter overflow occurred",
+        "name": "counterOverflow"
+      },
+      {
+        "code": 2,
+        "kind": "errorNode",
+        "message": "Incorrect program ID",
+        "name": "incorrectProgramId"
+      }
+    ],
+    "instructions": [
+      {
+        "accounts": [
+          {
+            "isSigner": true,
+            "isWritable": true,
+            "kind": "instructionAccountNode",
+            "name": "counter"
+          },
+          {
+            "isSigner": true,
+            "isWritable": true,
+            "kind": "instructionAccountNode",
+            "name": "payer"
+          },
+          {
+            "defaultValue": {
+              "kind": "publicKeyValueNode",
+              "publicKey": "11111111111111111111111111111111"
+            },
+            "isSigner": false,
+            "isWritable": false,
+            "kind": "instructionAccountNode",
+            "name": "systemProgram"
+          }
+        ],
+        "arguments": [
+          {
+            "defaultValue": {
+              "kind": "numberValueNode",
+              "number": 0
+            },
+            "defaultValueStrategy": "omitted",
+            "kind": "instructionArgumentNode",
+            "name": "discriminator",
+            "type": {
+              "endian": "le",
+              "format": "u32",
+              "kind": "numberTypeNode"
+            }
+          },
+          {
+            "kind": "instructionArgumentNode",
+            "name": "initialValue",
+            "type": {
+              "endian": "le",
+              "format": "u64",
+              "kind": "numberTypeNode"
+            }
+          }
+        ],
+        "discriminators": [
+          {
+            "kind": "fieldDiscriminatorNode",
+            "name": "discriminator",
+            "offset": 0
+          }
+        ],
+        "kind": "instructionNode",
+        "name": "initializeCounter"
+      },
+      {
+        "accounts": [
+          {
+            "isSigner": false,
+            "isWritable": true,
+            "kind": "instructionAccountNode",
+            "name": "counter"
+          }
+        ],
+        "arguments": [
+          {
+            "defaultValue": {
+              "kind": "numberValueNode",
+              "number": 1
+            },
+            "defaultValueStrategy": "omitted",
+            "kind": "instructionArgumentNode",
+            "name": "discriminator",
+            "type": {
+              "endian": "le",
+              "format": "u32",
+              "kind": "numberTypeNode"
+            }
+          }
+        ],
+        "discriminators": [
+          {
+            "kind": "fieldDiscriminatorNode",
+            "name": "discriminator",
+            "offset": 0
+          }
+        ],
+        "kind": "instructionNode",
+        "name": "incrementCounter"
+      }
+    ],
+    "kind": "programNode",
+    "name": "counterProgram",
+    "pdas": [],
+    "publicKey": "ATjcKTRrFZwdTjSYpheKkEKKAPzf4iUoK6ZtPqJysnyN",
+    "version": "0.1.0"
+  },
+  "standard": "codama",
+  "version": "1.0.0"
+}

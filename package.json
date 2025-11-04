@@ -1,0 +1,18 @@
+{
+  "name": "counter-program-codama",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "generate": "codama run js && codama run rust",
+    "generate:js": "codama run js",
+    "generate:rust": "codama run rust",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "license": "MIT",
+  "packageManager": "pnpm@10.6.4",
+  "devDependencies": {
+    "@codama/renderers-js": "^1.4.3",
+    "@codama/renderers-rust": "^1.2.7",
+    "codama": "^1.3.7"
+  }
+}
