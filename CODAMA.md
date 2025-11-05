@@ -2,6 +2,8 @@
 
 This document provides detailed information about using Codama for IDL generation and client code generation in native Solana programs.
 
+Note: Codama macros are still in development and are not yet stable.
+
 ## 📋 Table of Contents
 
 - [What is Codama?](#what-is-codama)
@@ -344,23 +346,6 @@ warning: unexpected `cfg` condition name: `target_os`
 
 These are harmless warnings from Solana's `entrypoint!` macro. Safe to ignore.
 
-### Serialization Issues
-
-**Problem:** Instruction fails with "invalid instruction data"
-
-**Solution:** Check discriminator size. Borsh uses 1-byte discriminators for enums with variants 0-127.
-
-```rust
-// ❌ DON'T use repr(u32) - causes 4-byte discriminator
-#[repr(u32)]
-#[derive(CodamaInstructions, ...)]
-pub enum CounterInstruction { ... }
-
-// ✅ DO use default - Borsh uses 1 byte for small enums
-#[derive(CodamaInstructions, ...)]
-pub enum CounterInstruction { ... }
-```
-
 **Debug serialization:**
 
 See [examples/debug_instruction.rs](examples/debug_instruction.rs) for a debug script that shows how Borsh serializes instructions.
@@ -371,32 +356,9 @@ cargo run --example debug_instruction
 
 This will print the hex representation, bytes, and length of serialized instructions.
 
-### Client Generation Fails
-
-**Problem:** `pnpm generate` fails
-
-**Check:**
-
-1. IDL file exists: `ls -la idl.json`
-2. IDL is valid JSON: `cat idl.json | jq .`
-3. Dependencies installed: `pnpm install`
-4. Codama config is correct: `cat codama.json`
-
-### Account Not Found
-
-**Problem:** Client can't fetch account
-
-**Check:**
-
-1. Account was created: `solana account <address>`
-2. Program deployed: `solana program show <program-id>`
-3. Using correct RPC URL in client
-4. Account passed to correct instruction
-
 ## Learn More
 
 - 📖 [Codama Documentation](https://github.com/codama-idl/codama)
-- 🦀 [Codama Rust Macros](https://github.com/codama-idl/codama/tree/main/packages/renderers-rust)
 - 📜 [Borsh Specification](https://borsh.io/)
 - 🌐 [@solana/kit Documentation](https://www.solanakit.com/docs)
 - 🔧 [Codama Visitors](https://github.com/codama-idl/codama/blob/main/packages/visitors/README.md)

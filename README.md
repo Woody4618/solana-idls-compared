@@ -359,19 +359,16 @@ if pda != *counter_account.key {
 **Native + Codama:**
 
 ```rust
-// Manual derivation in program, but can document in IDL
+// Manual derivation in program
 let (pda, bump) = Pubkey::find_program_address(
     &[b"counter", user.key.as_ref()],
     program_id
 );
 
-// Can add PDA metadata using addPdasVisitor in codama.json
-```
-
-```typescript
-// Client can use PDA info from IDL if added via visitors
-import { findCounterPda } from "./generated";
-const [pda] = findCounterPda({ user: userPublicKey });
+// Manual validation still required
+if pda != *counter_account.key {
+    return Err(ProgramError::InvalidSeeds);
+}
 ```
 
 **Anchor:**
@@ -410,7 +407,7 @@ await program.methods
 **Key Differences:**
 
 - ✅ **Anchor**: Automatic PDA derivation and validation with `seeds` and `bump` constraints. The account discriminator and seeds are included in IDL, enabling client-side auto-resolution.
-- ⚙️ **Codama**: Manual PDA derivation in program. Can add PDA metadata to IDL using `addPdasVisitor` for client generation.
+- ⚙️ **Codama**: Manual PDA derivation and validation in program.
 - 🔧 **Native**: Completely manual - write all derivation and validation logic yourself.
 
 #### 8. Serialization Options
@@ -428,7 +425,7 @@ use bincode;
 
 // Custom binary format
 pub fn custom_deserialize(data: &[u8]) -> Result<MyStruct, ProgramError> {
-    // Hand-written deserialization for maximum efficiency
+    // Hand-written deserialization for custom data (only if really needed since it decreases composability)
 }
 ```
 
@@ -586,7 +583,7 @@ pnpm client
 
 ```bash
 cd anchor-counter
-npm test
+anchor test
 ```
 
 **Features:**
@@ -620,6 +617,8 @@ npm test
 - ✅ You want strong safety guarantees with account constraints
 - ✅ You're new to Solana development
 - ✅ You prefer standardized Borsh serialization
+
+For most use cases its recommended to use Anchor since it provides a lot of safety guarantees and is easier to get started with.
 
 ## 📚 Learn More
 
