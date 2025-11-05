@@ -80,7 +80,7 @@
             "name": "discriminator",
             "type": {
               "endian": "le",
-              "format": "u32",
+              "format": "u8",
               "kind": "numberTypeNode"
             }
           },
@@ -124,7 +124,7 @@
             "name": "discriminator",
             "type": {
               "endian": "le",
-              "format": "u32",
+              "format": "u8",
               "kind": "numberTypeNode"
             }
           }

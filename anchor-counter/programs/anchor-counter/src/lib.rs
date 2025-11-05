@@ -11,7 +11,7 @@ pub mod anchor_counter {
         let counter = &mut ctx.accounts.counter;
         counter.count = initial_value;
         counter.authority = ctx.accounts.authority.key();
-        
+
         msg!("Counter initialized with value: {}", initial_value);
         Ok(())
     }
@@ -19,13 +19,13 @@ pub mod anchor_counter {
     /// Increment the counter by 1
     pub fn increment_counter(ctx: Context<IncrementCounter>) -> Result<()> {
         let counter = &mut ctx.accounts.counter;
-        
+
         // Check for overflow
         counter.count = counter
             .count
             .checked_add(1)
             .ok_or(ErrorCode::CounterOverflow)?;
-        
+
         msg!("Counter incremented to: {}", counter.count);
         Ok(())
     }
@@ -39,10 +39,10 @@ pub struct InitializeCounter<'info> {
         space = 8 + Counter::INIT_SPACE
     )]
     pub counter: Account<'info, Counter>,
-    
+
     #[account(mut)]
     pub authority: Signer<'info>,
-    
+
     pub system_program: Program<'info, System>,
 }
 
@@ -50,7 +50,7 @@ pub struct InitializeCounter<'info> {
 pub struct IncrementCounter<'info> {
     #[account(mut)]
     pub counter: Account<'info, Counter>,
-    
+
     pub authority: Signer<'info>,
 }
 

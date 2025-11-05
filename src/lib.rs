@@ -24,13 +24,12 @@ pub fn process_instruction(
 #[cfg(test)]
 mod test {
     use super::*;
-    use borsh::{BorshDeserialize, BorshSerialize};
+    use borsh::{BorshDeserialize};
     use litesvm::LiteSVM;
     use solana_sdk::{
         account::ReadableAccount,
         instruction::{AccountMeta, Instruction},
         message::Message,
-        pubkey,
         pubkey::Pubkey,
         signature::{Keypair, Signer},
         transaction::Transaction,
