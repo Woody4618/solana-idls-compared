@@ -30,7 +30,7 @@ solana-idls-compared/
 │   └── tests/                   # TypeScript tests
 │
 ├── examples/
-│   ├── client.rs               # Manual Rust client (native)
+│   ├── native-client.rs        # Manual Rust client (native)
 │   └── codama-client.ts        # Generated TypeScript client (Codama)
 │
 ├── clients/                     # Auto-generated from IDL
@@ -530,7 +530,7 @@ npx @solana-program/program-metadata@latest write idl <program-id> ./idl.json
 pnpm client
 
 # Test with Rust client
-cargo run --example client
+cargo run --example native-client
 ```
 
 ### Anchor Program
@@ -554,7 +554,7 @@ anchor deploy
 ### Manual Rust Client (Native)
 
 ```bash
-cargo run --example client
+cargo run --example native-client
 ```
 
 **Features:**
