@@ -65,11 +65,11 @@ Increments the counter by 1.
 
 ### Overview
 
-| Approach            | IDL Generation      | Client Generation      | Boilerplate | Control | Best For               |
-| ------------------- | ------------------- | ---------------------- | ----------- | ------- | ---------------------- |
-| **Native Solana**   | Manual              | Manual                 | High        | Maximum | Low-level optimization |
-| **Native + Codama** | Auto (build.rs)     | Auto (TypeScript/Rust) | Medium      | High    | Custom logic + tooling |
-| **Anchor**          | Auto (anchor build) | Auto (TypeScript)      | Low         | Medium  | Rapid development      |
+| Approach            | IDL Generation      | Client Generation      | PDA Support        | Serialization    | Boilerplate | Control | Best For               |
+| ------------------- | ------------------- | ---------------------- | ------------------ | ---------------- | ----------- | ------- | ---------------------- |
+| **Native Solana**   | Manual              | Manual                 | Manual             | Any (custom)     | High        | Maximum | Low-level optimization |
+| **Native + Codama** | Auto (build.rs)     | Auto (TypeScript/Rust) | Manual/Visitor API | Borsh, custom    | Medium      | High    | Custom logic + tooling |
+| **Anchor**          | Auto (anchor build) | Auto (TypeScript)      | Auto-resolution    | Borsh, Zero Copy | Low         | Medium  | Rapid development      |
 
 ### Detailed Comparison
 
@@ -183,6 +183,8 @@ const instruction = getInitializeCounterInstruction({
 
 **Anchor:**
 
+Most accounts and PDAs have auto resolution from the IDL.
+
 ```typescript
 // Generated Anchor client
 import { Program } from "@coral-xyz/anchor";
@@ -192,7 +194,6 @@ await program.methods
   .accounts({
     counter: counterKeypair.publicKey,
     payer: payer.publicKey,
-    systemProgram: SystemProgram.programId,
   })
   .signers([counterKeypair])
   .rpc();
@@ -338,7 +339,140 @@ describe("counter", () => {
 });
 ```
 
-#### 7. Program Size
+#### 7. PDA (Program Derived Address) Handling
+
+**Native Solana:**
+
+```rust
+// Manual PDA derivation
+let (pda, bump) = Pubkey::find_program_address(
+    &[b"counter", user.key.as_ref()],
+    program_id
+);
+
+// Manual validation
+if pda != *counter_account.key {
+    return Err(ProgramError::InvalidSeeds);
+}
+```
+
+**Native + Codama:**
+
+```rust
+// Manual derivation in program, but can document in IDL
+let (pda, bump) = Pubkey::find_program_address(
+    &[b"counter", user.key.as_ref()],
+    program_id
+);
+
+// Can add PDA metadata using addPdasVisitor in codama.json
+```
+
+```typescript
+// Client can use PDA info from IDL if added via visitors
+import { findCounterPda } from "./generated";
+const [pda] = findCounterPda({ user: userPublicKey });
+```
+
+**Anchor:**
+
+```rust
+// Automatic PDA derivation and validation
+#[derive(Accounts)]
+pub struct Initialize<'info> {
+    #[account(
+        init,
+        payer = payer,
+        space = 8 + 8,
+        seeds = [b"counter", user.key().as_ref()],
+        bump
+    )]
+    pub counter: Account<'info, Counter>,
+}
+```
+
+```typescript
+// Client automatically resolves PDAs from seeds in IDL
+const [counterPda] = anchor.web3.PublicKey.findProgramAddressSync(
+  [Buffer.from("counter"), user.publicKey.toBuffer()],
+  program.programId
+);
+
+await program.methods
+  .initialize(new BN(100))
+  .accounts({
+    counter: counterPda, // Anchor validates this matches seeds and you dont event have to pass it into the function. Its auto resolved for you!
+    payer: payer.publicKey,
+  })
+  .rpc();
+```
+
+**Key Differences:**
+
+- ✅ **Anchor**: Automatic PDA derivation and validation with `seeds` and `bump` constraints. The account discriminator and seeds are included in IDL, enabling client-side auto-resolution.
+- ⚙️ **Codama**: Manual PDA derivation in program. Can add PDA metadata to IDL using `addPdasVisitor` for client generation.
+- 🔧 **Native**: Completely manual - write all derivation and validation logic yourself.
+
+#### 8. Serialization Options
+
+**Native Solana:**
+
+Supports any serialization format:
+
+```rust
+// Borsh
+use borsh::{BorshDeserialize, BorshSerialize};
+
+// Bincode (used by system programs)
+use bincode;
+
+// Custom binary format
+pub fn custom_deserialize(data: &[u8]) -> Result<MyStruct, ProgramError> {
+    // Hand-written deserialization for maximum efficiency
+}
+```
+
+**Native + Codama:**
+
+Flexible serialization support:
+
+- ✅ **Borsh** (primary, default)
+- ✅ **Custom formats**
+- ✅ **Mixed formats** (different instructions can use different formats)
+
+```rust
+// Can use Borsh for most data
+#[derive(CodamaAccount, BorshSerialize, BorshDeserialize)]
+pub struct CounterAccount {
+    pub count: u64,
+}
+
+// But document alternative formats in IDL if needed
+// (e.g., for specific instructions requiring JSON)
+```
+
+**Anchor:**
+
+Primarily Borsh:
+
+- ✅ **Borsh** (primary, optimized)
+- Zero Copy
+- Works well for most use cases
+
+```rust
+#[account]
+pub struct Counter {
+    pub count: u64,  // Automatically uses Borsh
+}
+```
+
+**Key Differences:**
+
+- 🎨 **Codama**: Most flexible - supports Borsh and custom formats. Can mix serialization strategies.
+- 📦 **Anchor**: Standardized on Borsh for consistency and optimization. Simple and reliable. Also Supports Zero Copy.
+- 🔧 **Native**: Complete freedom but requires manual implementation of all serialization logic.
+
+#### 9. Program Size
 
 | Approach        | Compiled Size | Note                          |
 | --------------- | ------------- | ----------------------------- |
@@ -346,9 +480,9 @@ describe("counter", () => {
 | Native + Codama | ~Small        | Codama only affects build     |
 | Anchor          | ~Larger       | Additional framework overhead |
 
-_Note: Actual sizes depend on program complexity.
+\_Note: Actual sizes depend on program complexity.
 
-#### 8. Learning Curve
+#### 10. Learning Curve
 
 **Native Solana:**
 
@@ -392,6 +526,9 @@ pnpm generate
 # Deploy
 solana program deploy target/deploy/counter_program.so
 
+solana address -k target/deploy/counter_program-keypair.json
+npx @solana-program/program-metadata@latest write idl <program-id> ./idl.json
+
 # Test with TypeScript client
 pnpm client
 
@@ -411,7 +548,7 @@ anchor build
 npm install
 npm test
 
-# Deploy
+# Deploy auto uploads the IDL
 anchor deploy
 ```
 
@@ -471,15 +608,18 @@ npm test
 
 - ✅ You want control over program logic
 - ✅ You need custom instruction discriminators
-- ✅ You want auto-generated clients
-- ✅ You're comfortable with lower-level Solana
+- ✅ You need **flexible serialization** (Borsh, JSON, or custom formats)
+- ✅ You want auto-generated clients in multiple languages
+- ✅ You're comfortable with lower-level Solana and manual PDA handling
 
 ### Choose **Anchor** if:
 
 - ✅ You want to ship fast
 - ✅ You want to write a secure program
-- ✅ You want strong safety guarantees
+- ✅ You need **automatic PDA derivation and validation**
+- ✅ You want strong safety guarantees with account constraints
 - ✅ You're new to Solana development
+- ✅ You prefer standardized Borsh serialization
 
 ## 📚 Learn More
 

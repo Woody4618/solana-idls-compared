@@ -112,12 +112,14 @@ async function main() {
 
   const signedInitializeTx =
     await signTransactionMessageWithSigners(initializeMessage);
-  const initializeSignature = await sendAndConfirmTransaction(
-    signedInitializeTx,
-    {
-      commitment: "confirmed",
-    }
-  );
+
+  // Extract signature from the signed transaction
+  const initializeSignature = getSignatureFromTransaction(signedInitializeTx);
+
+  // Send and confirm transaction
+  await sendAndConfirmTransaction(signedInitializeTx, {
+    commitment: "confirmed",
+  });
 
   console.log(`✅ Counter initialized!`);
   console.log(`Transaction: ${initializeSignature}`);
@@ -148,12 +150,14 @@ async function main() {
 
   const signedIncrementTx =
     await signTransactionMessageWithSigners(incrementMessage);
-  const incrementSignature = await sendAndConfirmTransaction(
-    signedIncrementTx,
-    {
-      commitment: "confirmed",
-    }
-  );
+
+  // Extract signature from the signed transaction
+  const incrementSignature = getSignatureFromTransaction(signedIncrementTx);
+
+  // Send and confirm transaction
+  await sendAndConfirmTransaction(signedIncrementTx, {
+    commitment: "confirmed",
+  });
 
   console.log(`✅ Counter incremented!`);
   console.log(`Transaction: ${incrementSignature}`);

@@ -327,7 +327,7 @@ pnpm client
 # Deploy program
 solana program deploy target/deploy/counter_program.so
 
-# Upload IDL for discoverability
+# Upload IDL for discoverability (devnet, mainnet or you need to load the program metadata program localy)
 solana address -k target/deploy/counter_program-keypair.json
 npx @solana-program/program-metadata@latest write idl <program-id> ./idl.json
 ```

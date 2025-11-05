@@ -21,8 +21,7 @@ describe("anchor-counter", () => {
       .initializeCounter(new anchor.BN(initialValue))
       .accounts({
         counter: counterKeypair.publicKey,
-        authority: provider.wallet.publicKey,
-        systemProgram: anchor.web3.SystemProgram.programId,
+        authority: provider.wallet.publicKey
       })
       .signers([counterKeypair])
       .rpc();
