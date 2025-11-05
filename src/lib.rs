@@ -24,14 +24,14 @@ pub fn process_instruction(
 #[cfg(test)]
 mod test {
     use super::*;
-    use borsh::{BorshDeserialize};
+    use borsh::BorshDeserialize;
     use litesvm::LiteSVM;
     use solana_sdk::{
         account::ReadableAccount,
         instruction::{AccountMeta, Instruction},
         message::Message,
         pubkey::Pubkey,
-        signature::{Keypair, Signer},
+        signature::{read_keypair_file, Keypair, Signer},
         transaction::Transaction,
     };
 
@@ -47,7 +47,9 @@ mod test {
         let payer = Keypair::new();
 
         // Find our program ID (you can get this from your deployed program)
-        let program_id = Pubkey::from_str_const("ATjcKTRrFZwdTjSYpheKkEKKAPzf4iUoK6ZtPqJysnyN");
+        let program_keypair = read_keypair_file("target/deploy/counter_program-keypair.json")
+            .expect("Program keypair file not found");
+        let program_id = program_keypair.pubkey();
 
         // Airdrop some SOL to the payer
         svm.airdrop(&payer.pubkey(), 1_000_000_000).unwrap();
