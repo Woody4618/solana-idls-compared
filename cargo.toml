@@ -28,8 +28,8 @@ codama = "0.5"
 serde_json = "1.0"
 
 [[example]]
-name = "client"
-path = "examples/client.rs"
+name = "native-client"
+path = "examples/native-client.rs"
 
 [[example]]
 name = "debug_instruction"

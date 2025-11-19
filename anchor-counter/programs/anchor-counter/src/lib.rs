@@ -1,4 +1,6 @@
 use anchor_lang::prelude::*;
+use anchor_lang::solana_program::instruction::{AccountMeta, Instruction};
+use anchor_lang::solana_program::program::invoke;
 
 declare_id!("27YreJqker2o5TvzzLUsiC9ZGMdPThvEm8qZBNDw5EWX");
 
@@ -29,6 +31,35 @@ pub mod anchor_counter {
         msg!("Counter incremented to: {}", counter.count);
         Ok(())
     }
+
+    /// Perform a CPI to increment a native counter
+    /// This demonstrates how to call a native Solana program from Anchor
+    pub fn increment_native_counter(ctx: Context<IncrementNativeCounter>) -> Result<()> {
+        msg!("Performing CPI to native program...");
+
+        // Native program's IncrementCounter instruction
+        // Uses Borsh serialization with enum discriminator (variant 1 = IncrementCounter)
+        let instruction_data: Vec<u8> = vec![1]; // Enum variant 1
+
+        // Build the CPI instruction
+        let cpi_instruction = Instruction {
+            program_id: ctx.accounts.native_program.key(),
+            accounts: vec![AccountMeta::new(ctx.accounts.native_counter.key(), false)],
+            data: instruction_data,
+        };
+
+        // Invoke the CPI
+        invoke(
+            &cpi_instruction,
+            &[
+                ctx.accounts.native_counter.to_account_info(),
+                ctx.accounts.native_program.to_account_info(),
+            ],
+        )?;
+
+        msg!("Successfully incremented native counter via CPI");
+        Ok(())
+    }
 }
 
 #[derive(Accounts)]
@@ -52,6 +83,16 @@ pub struct IncrementCounter<'info> {
     pub counter: Account<'info, Counter>,
 
     pub authority: Signer<'info>,
+}
+
+#[derive(Accounts)]
+pub struct IncrementNativeCounter<'info> {
+    /// CHECK: This is the native counter account from the native program
+    #[account(mut)]
+    pub native_counter: AccountInfo<'info>,
+
+    /// CHECK: This is the native program's ID
+    pub native_program: AccountInfo<'info>,
 }
 
 #[account]

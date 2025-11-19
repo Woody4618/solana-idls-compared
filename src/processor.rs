@@ -26,6 +26,7 @@ pub fn process(
             process_initialize_counter(program_id, accounts, initial_value)?
         }
         CounterInstruction::IncrementCounter => process_increment_counter(program_id, accounts)?,
+        CounterInstruction::IncrementAnchorCounter => process_increment_anchor_counter(accounts)?,
     };
     Ok(())
 }
@@ -107,5 +108,52 @@ fn process_increment_counter(program_id: &Pubkey, accounts: &[AccountInfo]) -> P
     counter_data.serialize(&mut &mut data[..])?;
 
     msg!("Counter incremented to: {}", counter_data.count);
+    Ok(())
+}
+
+/// Perform a CPI to increment an Anchor counter
+/// This demonstrates how to call an Anchor program from a native Solana program
+fn process_increment_anchor_counter(accounts: &[AccountInfo]) -> ProgramResult {
+    let accounts_iter = &mut accounts.iter();
+
+    let anchor_counter_account = next_account_info(accounts_iter)?;
+    let anchor_authority_account = next_account_info(accounts_iter)?;
+    let anchor_program = next_account_info(accounts_iter)?;
+
+    msg!("Performing CPI to Anchor program...");
+
+    // Anchor's increment_counter instruction discriminator (from IDL)
+    // This is derived from: anchor_lang::prelude::hash::hash(b"global:increment_counter")
+    // For Anchor, the discriminator is the first 8 bytes of the SHA256 hash
+    // of the namespace:instruction_name string
+    let discriminator: [u8; 8] = [16, 125, 2, 171, 73, 24, 207, 229];
+
+    // Build the instruction data (just the discriminator, no additional args)
+    let instruction_data = discriminator.to_vec();
+
+    // Create the instruction for the CPI
+    let cpi_instruction = solana_program::instruction::Instruction {
+        program_id: *anchor_program.key,
+        accounts: vec![
+            solana_program::instruction::AccountMeta::new(*anchor_counter_account.key, false),
+            solana_program::instruction::AccountMeta::new_readonly(
+                *anchor_authority_account.key,
+                true,
+            ),
+        ],
+        data: instruction_data,
+    };
+
+    // Invoke the CPI
+    invoke(
+        &cpi_instruction,
+        &[
+            anchor_counter_account.clone(),
+            anchor_authority_account.clone(),
+            anchor_program.clone(),
+        ],
+    )?;
+
+    msg!("Successfully incremented Anchor counter via CPI");
     Ok(())
 }

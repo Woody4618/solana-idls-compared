@@ -65,11 +65,11 @@ Increments the counter by 1.
 
 ### Overview
 
-| Approach            | IDL Generation      | Client Generation      | PDA Support        | Serialization    | Boilerplate | Control | Best For               |
-| ------------------- | ------------------- | ---------------------- | ------------------ | ---------------- | ----------- | ------- | ---------------------- |
-| **Native Solana**   | Manual              | Manual                 | Manual             | Any (custom)     | High        | Maximum | Low-level optimization |
-| **Native + Codama** | Auto (build.rs)     | Auto (TypeScript/Rust) | Manual/Visitor API | Borsh, custom    | Medium      | High    | Custom logic + tooling |
-| **Anchor**          | Auto (anchor build) | Auto (TypeScript)      | Auto-resolution    | Borsh, Zero Copy | Low         | Medium  | Rapid development      |
+| Approach            | IDL Generation      | Client Generation      | PDA Support           | CPI Support             | Serialization    | Boilerplate | Control | Best For               |
+| ------------------- | ------------------- | ---------------------- | --------------------- | ----------------------- | ---------------- | ----------- | ------- | ---------------------- |
+| **Native Solana**   | Manual              | Manual                 | Manual                | Manual                  | Any (custom)     | High        | Maximum | Low-level optimization |
+| **Native + Codama** | Auto (build.rs)     | Auto (TypeScript/Rust) | Manual (Visitor API?) | Manual                  | Borsh, custom    | Medium      | High    | Custom logic + tooling |
+| **Anchor**          | Auto (anchor build) | Auto (TypeScript)      | Auto-resolution       | Auto (Anchor-to-Anchor) | Borsh, Zero Copy | Low         | Medium  | Rapid development      |
 
 ### Detailed Comparison
 
@@ -272,8 +272,8 @@ pub enum CounterInstruction {
 
 ```rust
 // 8-byte discriminator derived from instruction name
-// "initialize_counter" => [175, 175, 109, 31, 13, 152, 155, 237]
-// "increment_counter"  => [11, 18, 104, 9, 104, 174, 59, 33]
+// "initialize_counter" => [67, 89, 100, 87, 231, 172, 35, 124]
+// "increment_counter"  => [16, 125, 2, 171, 73, 24, 207, 229]
 #[program]
 pub mod counter {
     pub fn initialize_counter(...) -> Result<()> { ... }
@@ -504,6 +504,120 @@ pub struct Counter {
 - Helpful error messages
 - Faster to get started
 
+#### 11. Cross-Program Invocation (CPI)
+
+CPIs allow one program to call another program's instructions. This repository includes examples of:
+
+- **Native → Anchor CPI**: Native program calling Anchor program
+- **Anchor → Native CPI**: Anchor program calling native program
+
+**Native Solana CPI:**
+
+```rust
+// Manual CPI construction
+use solana_program::instruction::Instruction;
+
+// Build instruction manually with correct discriminator
+let discriminator: [u8; 8] = [16, 125, 2, 171, 73, 24, 207, 229]; // Anchor's increment_counter
+let instruction_data = discriminator.to_vec();
+
+let cpi_instruction = Instruction {
+    program_id: *target_program_id,
+    accounts: vec![
+        AccountMeta::new(*counter_account, false),
+        AccountMeta::new_readonly(*authority, true),
+    ],
+    data: instruction_data,
+};
+
+// Invoke the CPI
+invoke(&cpi_instruction, &[counter_account, authority, target_program])?;
+```
+
+**Native + Codama CPI:**
+
+Same as native Solana - Codama helps with client generation but doesn't simplify CPIs:
+
+```rust
+// Still manual CPI construction
+let discriminator: [u8; 8] = [16, 125, 2, 171, 73, 24, 207, 229];
+let cpi_instruction = Instruction {
+    program_id: *anchor_program.key,
+    accounts: vec![
+        AccountMeta::new(*anchor_counter_account.key, false),
+        AccountMeta::new_readonly(*anchor_authority_account.key, true),
+    ],
+    data: discriminator.to_vec(),
+};
+
+invoke(&cpi_instruction, &[anchor_counter_account, anchor_authority_account, anchor_program])?;
+```
+
+**Anchor CPI:**
+
+Anchor can generate CPI helper functions, but for calling native programs you still need manual construction:
+
+```rust
+// Use anchor_lang's re-exports (add to top of file)
+use anchor_lang::solana_program::instruction::{AccountMeta, Instruction};
+use anchor_lang::solana_program::program::invoke;
+
+// Calling a native program from Anchor - still manual
+let instruction_data: Vec<u8> = vec![1]; // Native enum variant
+
+let cpi_instruction = Instruction {
+    program_id: ctx.accounts.native_program.key(),
+    accounts: vec![
+        AccountMeta::new(ctx.accounts.native_counter.key(), false),
+    ],
+    data: instruction_data,
+};
+
+invoke(
+    &cpi_instruction,
+    &[ctx.accounts.native_counter.to_account_info()],
+)?;
+```
+
+**For Anchor-to-Anchor CPIs**, Anchor provides automatic CPI helper generation:
+
+```rust
+// Anchor-to-Anchor CPI (much easier with generated helpers)
+use other_program::cpi;
+
+cpi::increment_counter(
+    CpiContext::new(
+        ctx.accounts.other_program.to_account_info(),
+        cpi::accounts::IncrementCounter {
+            counter: ctx.accounts.counter.to_account_info(),
+            authority: ctx.accounts.authority.to_account_info(),
+        },
+    ),
+)?;
+```
+
+**Key Differences:**
+
+| Aspect               | Native/Codama                     | Anchor                                          |
+| -------------------- | --------------------------------- | ----------------------------------------------- |
+| **CPI Construction** | Always manual                     | Manual for native, auto-generated for Anchor    |
+| **Discriminators**   | Must know target format           | Auto-handled for Anchor-to-Anchor               |
+| **Account Passing**  | Manual AccountMeta construction   | Type-safe with CpiContext for Anchor-to-Anchor  |
+| **Type Safety**      | None - raw bytes                  | Full type safety for Anchor-to-Anchor           |
+| **Error Handling**   | Manual error propagation          | Automatic error mapping for Anchor-to-Anchor    |
+| **Best For**         | Maximum control, any program type | Rapid development when both programs are Anchor |
+
+**Testing CPIs:**
+
+Both approaches include tests demonstrating CPIs:
+
+- **Native Test**: `cargo test test_cpi_to_anchor_counter` (in `src/lib.rs`)
+- **Anchor Test**: `anchor test` (includes CPI to native program test)
+
+See the test files for complete working examples of both CPI directions!
+
+📖 **Detailed CPI Documentation**: See [CPI_EXAMPLES.md](./CPI_EXAMPLES.md) for in-depth explanations, implementation details, and how to find instruction discriminators.
+
 ## 🚀 Getting Started
 
 ### Prerequisites
@@ -531,6 +645,12 @@ pnpm client
 
 # Test with Rust client
 cargo run --example native-client
+
+# Run Rust tests (including CPI tests)
+# Note: Build both programs first
+cd anchor-counter && anchor build && cd ..
+cargo build-sbf
+cargo test
 ```
 
 ### Anchor Program
@@ -541,9 +661,11 @@ cd anchor-counter
 # Build (generates IDL + program)
 anchor build
 
-# Test
+# Test (includes CPI tests)
+# Note: Build native program first for CPI test
+cd .. && cargo build-sbf && cd anchor-counter
 npm install
-npm test
+anchor test
 
 # Deploy auto uploads the IDL
 anchor deploy
@@ -656,3 +778,53 @@ MIT
 ---
 
 **Questions or feedback?** Open an issue or reach out on Discord!
+
+Quick Summary of what is missing and what we could do:
+
+Codama missing / todos
+
+- Codama does not create package.json and cargo.toml for clients
+- Codama needs a framework around it to make build, generate and upload IDL automatically. Could be done in anchor maybe.
+- Kit compatible version for LiteSVM missing. So you need to use rust, but then in the client you likely use ts.
+- Wallet connect button for kit missing (Does https://docs.hermis.io/ will that gap or maybe what gui is building?)
+- Codama clients are missing the option to call them on the fly like anchor programs.
+  - Currently cant connect anchor programs using kit
+- Codama does not support has one constraint so we cant use it in anchor programs
+- Codama does need static program ID and fails conversion:
+  - Source: https://solana.stackexchange.com/questions/22836/codamaerror-program-id-kind-account-is-not-implemented?utm_source=chatgpt.com
+- Automatic accounts resolution for PDAs?
+- Are errors mapped the same way?
+- Events: Anchor events are emitted via logs. Will that be part of the kit client as well?
+- Support enums, lists, generics, etc.
+
+- Missing template or anchor init for anchor/codama kit clients.
+  - Currently cant connect anchor programs using kit
+  - We could let Hoodies build that and contribute it to codama repo.
+- Codama does not support hasOne constraint
+- Account types? If any accounts/instructions use edge types (e.g., u128/i128, nested enums, fixed-length arrays, Vec<Vec<u8>>, optional complex enums), verify Codama’s generator matches your on-chain layout exactly. Mismatches here are subtle and painful.
+- Errors: Anchor errors export fine, but ensure your Kit client maps them to nice TS discriminants.
+- Events: Anchor events are emitted via logs. Make sure your Kit stack has the log parser wired (and that your transport supports it).
+- HasOne and seeds are missing from the IDL in anchor already. So the ts client is generated from the rust source code metadat and macros. Thats why it can be added.
+
+- Create anchor init or template that uses the anchor idl to generate codama to generate kit client
+- Implement codama kit client generation into anchor to generate a rust and kit client next to the type script client
+
+- Talked to Brian about Vixxen to implement IDL parsing in grpc
+- IDL parsed data will also become much easier
+
+Notes:
+
+- Enums, Lists, etc
+- Should we add generics?
+
+Lets discuss with Loris next week
+
+Video 1
+Show how to use codama with anchor
+How to call the program using the codama client
+Show the kit compatible version
+
+Video 2
+native program how generate Codama client for that
+How to call the programs using the codama clients
+Cant get a web3js client out of codama

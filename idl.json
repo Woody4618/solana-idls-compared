@@ -138,6 +138,53 @@
         ],
         "kind": "instructionNode",
         "name": "incrementCounter"
+      },
+      {
+        "accounts": [
+          {
+            "isSigner": false,
+            "isWritable": true,
+            "kind": "instructionAccountNode",
+            "name": "anchorCounter"
+          },
+          {
+            "isSigner": true,
+            "isWritable": false,
+            "kind": "instructionAccountNode",
+            "name": "anchorAuthority"
+          },
+          {
+            "isSigner": false,
+            "isWritable": false,
+            "kind": "instructionAccountNode",
+            "name": "anchorProgram"
+          }
+        ],
+        "arguments": [
+          {
+            "defaultValue": {
+              "kind": "numberValueNode",
+              "number": 2
+            },
+            "defaultValueStrategy": "omitted",
+            "kind": "instructionArgumentNode",
+            "name": "discriminator",
+            "type": {
+              "endian": "le",
+              "format": "u8",
+              "kind": "numberTypeNode"
+            }
+          }
+        ],
+        "discriminators": [
+          {
+            "kind": "fieldDiscriminatorNode",
+            "name": "discriminator",
+            "offset": 0
+          }
+        ],
+        "kind": "instructionNode",
+        "name": "incrementAnchorCounter"
       }
     ],
     "kind": "programNode",

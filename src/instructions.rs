@@ -10,4 +10,10 @@ pub enum CounterInstruction {
 
     #[codama(account(name = "counter", writable))]
     IncrementCounter,
+
+    /// CPI: Increment an Anchor counter from this native program
+    #[codama(account(name = "anchor_counter", writable))]
+    #[codama(account(name = "anchor_authority", signer))]
+    #[codama(account(name = "anchor_program"))]
+    IncrementAnchorCounter,
 }
