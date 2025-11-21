@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "generate": "codama run js && codama run rust",
+    "generate:idl": "cargo build-sbf && codama",
     "generate:js": "codama run js",
     "generate:rust": "codama run rust",
     "client": "tsx examples/codama-client.ts",

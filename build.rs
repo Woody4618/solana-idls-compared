@@ -18,8 +18,12 @@ fn generate_idl() -> Result<(), Box<dyn std::error::Error>> {
     // Generate IDL.
     let manifest_dir = env::var("CARGO_MANIFEST_DIR")?;
     let crate_path = Path::new(&manifest_dir);
+    println!("cargo:warning=Loading from: {}", crate_path.display());
+
     let codama = Codama::load(crate_path)?;
     let idl_json = codama.get_json_idl()?;
+    println!("cargo:warning=IDL: {}", idl_json);
+    println!("cargo:warning=IDL generated successfully");
 
     // Parse and format the JSON with pretty printing.
     let parsed: serde_json::Value = serde_json::from_str(&idl_json)?;

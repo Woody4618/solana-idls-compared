@@ -1,4 +1,5 @@
 use crate::{instructions::CounterInstruction, state::CounterAccount};
+use anchor_lang::ToAccountInfo; // Required for Anchor CPI client
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
@@ -27,6 +28,15 @@ pub fn process(
         }
         CounterInstruction::IncrementCounter => process_increment_counter(program_id, accounts)?,
         CounterInstruction::IncrementAnchorCounter => process_increment_anchor_counter(accounts)?,
+        CounterInstruction::IncrementAnchorCounterRaw => {
+            process_increment_anchor_counter_raw(accounts)?
+        }
+        CounterInstruction::IncrementCounterSelfCpi => {
+            process_increment_counter_self_cpi(program_id, accounts)?
+        }
+        CounterInstruction::IncrementCounterCodamaClient => {
+            process_increment_counter_codama_client(program_id, accounts)?
+        }
     };
     Ok(())
 }
@@ -111,8 +121,14 @@ fn process_increment_counter(program_id: &Pubkey, accounts: &[AccountInfo]) -> P
     Ok(())
 }
 
-/// Perform a CPI to increment an Anchor counter
-/// This demonstrates how to call an Anchor program from a native Solana program
+/// Perform a CPI to increment an Anchor counter using Anchor's generated CPI client
+/// This demonstrates how to call an Anchor program from a native Solana program with type safety
+///
+/// Benefits of using Anchor's CPI client:
+/// - Type-safe: Compile-time validation of accounts and parameters
+/// - Auto-generated: No manual discriminator construction needed
+/// - Maintainable: Automatically updates when Anchor program changes
+/// - Error-resistant: Can't pass wrong accounts or wrong order
 fn process_increment_anchor_counter(accounts: &[AccountInfo]) -> ProgramResult {
     let accounts_iter = &mut accounts.iter();
 
@@ -120,12 +136,50 @@ fn process_increment_anchor_counter(accounts: &[AccountInfo]) -> ProgramResult {
     let anchor_authority_account = next_account_info(accounts_iter)?;
     let anchor_program = next_account_info(accounts_iter)?;
 
-    msg!("Performing CPI to Anchor program...");
+    msg!("Performing CPI to Anchor program using generated CPI client...");
+
+    // ✅ Use Anchor's type-safe CPI client
+    // This is auto-generated from the anchor-counter program when the 'cpi' feature is enabled
+    let cpi_program = anchor_program.to_account_info();
+    let cpi_accounts = anchor_counter::cpi::accounts::IncrementCounter {
+        counter: anchor_counter_account.to_account_info(),
+        authority: anchor_authority_account.to_account_info(),
+    };
+    let cpi_ctx = anchor_lang::context::CpiContext::new(cpi_program, cpi_accounts);
+    anchor_counter::cpi::increment_counter(cpi_ctx)?;
+
+    msg!("Successfully incremented Anchor counter via CPI (type-safe client)");
+    Ok(())
+}
+
+/// Perform a CPI to increment an Anchor counter using manual discriminator construction
+/// This demonstrates the low-level approach without using Anchor's generated CPI client
+///
+/// This approach is useful when:
+/// - You don't have access to the Anchor program's crate
+/// - You want to minimize dependencies
+/// - You need to understand the raw instruction format
+/// - You're calling from a non-Anchor program
+///
+/// Drawbacks compared to the CPI client:
+/// - Manual: Must look up discriminators from the IDL
+/// - Error-prone: No compile-time validation of accounts
+/// - Maintenance: Must update manually when the Anchor program changes
+/// - No type safety: Easy to pass wrong accounts or wrong order
+fn process_increment_anchor_counter_raw(accounts: &[AccountInfo]) -> ProgramResult {
+    let accounts_iter = &mut accounts.iter();
+
+    let anchor_counter_account = next_account_info(accounts_iter)?;
+    let anchor_authority_account = next_account_info(accounts_iter)?;
+    let anchor_program = next_account_info(accounts_iter)?;
+
+    msg!("Performing CPI to Anchor program using manual discriminator...");
 
     // Anchor's increment_counter instruction discriminator (from IDL)
     // This is derived from: anchor_lang::prelude::hash::hash(b"global:increment_counter")
     // For Anchor, the discriminator is the first 8 bytes of the SHA256 hash
     // of the namespace:instruction_name string
+    // You can find this in: anchor-counter/target/idl/anchor_counter.json
     let discriminator: [u8; 8] = [16, 125, 2, 171, 73, 24, 207, 229];
 
     // Build the instruction data (just the discriminator, no additional args)
@@ -154,6 +208,98 @@ fn process_increment_anchor_counter(accounts: &[AccountInfo]) -> ProgramResult {
         ],
     )?;
 
-    msg!("Successfully incremented Anchor counter via CPI");
+    msg!("Successfully incremented Anchor counter via CPI (raw/manual approach)");
+    Ok(())
+}
+
+/// Perform a self-CPI to increment the counter using Codama-style CPI pattern
+/// This demonstrates how to use a Codama-generated approach for calling your own program
+///
+/// The Codama-generated client (in clients/rust/) provides CPI helpers similar to Anchor:
+/// - IncrementCounterCpi and IncrementCounterCpiBuilder
+/// - Type-safe account validation
+/// - Builder pattern for clarity
+///
+/// However, due to version compatibility issues with mixing crate names, we implement
+/// the CPI pattern directly here, inspired by Codama's generated code structure.
+///
+/// Benefits of this approach:
+/// - Type-safe: Uses known instruction discriminators
+/// - Clean: Builder-like pattern for clarity
+/// - Compatible: Works within solana-program ecosystem
+///
+/// Use cases for self-CPI:
+/// - Program upgradability: Old version calls new version
+/// - Composability: Break complex logic into smaller instructions
+/// - Testing: Verify instruction behavior in different contexts
+fn process_increment_counter_self_cpi(
+    program_id: &Pubkey,
+    accounts: &[AccountInfo],
+) -> ProgramResult {
+    let accounts_iter = &mut accounts.iter();
+    let counter_account = next_account_info(accounts_iter)?;
+    let counter_program = next_account_info(accounts_iter)?;
+
+    // Verify we're calling our own program
+    if counter_program.key != program_id {
+        msg!("Error: Program ID mismatch");
+        return Err(ProgramError::IncorrectProgramId);
+    }
+
+    msg!("Performing self-CPI using Codama-style pattern...");
+
+    // ✅ Use Codama-style CPI pattern (inspired by generated code)
+    // Discriminator for IncrementCounter (variant 1 in the enum)
+    const INCREMENT_COUNTER_DISCRIMINATOR: u8 = 1;
+
+    // Build instruction data (just the discriminator)
+    let instruction_data = vec![INCREMENT_COUNTER_DISCRIMINATOR];
+
+    // Create the CPI instruction
+    use solana_program::instruction::{AccountMeta, Instruction};
+    let cpi_instruction = Instruction {
+        program_id: *program_id,
+        accounts: vec![AccountMeta::new(*counter_account.key, false)],
+        data: instruction_data,
+    };
+
+    // Invoke the CPI
+    invoke(&cpi_instruction, &[counter_account.clone()])?;
+
+    msg!("Successfully incremented counter via self-CPI (Codama-style pattern)");
+    Ok(())
+}
+
+/// Perform a self-CPI using the actual Codama-generated CPI client
+/// This demonstrates using Codama's auto-generated CPI helpers directly
+///
+/// The Codama-generated client (in clients/rust/instructions/) provides:
+/// - IncrementCounterCpi - Direct CPI struct
+/// - IncrementCounterCpiBuilder - Builder pattern for constructing CPIs
+///
+/// Benefits of using Codama's generated client:
+/// - Type-safe account structures
+/// - Builder pattern for clarity
+/// - Auto-generated from IDL
+/// - Consistent with Anchor's CPI style
+/// - Handles instruction data serialization automatically
+fn process_increment_counter_codama_client(
+    program_id: &Pubkey,
+    accounts: &[AccountInfo],
+) -> ProgramResult {
+    let accounts_iter = &mut accounts.iter();
+    let counter_account = next_account_info(accounts_iter)?;
+    let counter_program = next_account_info(accounts_iter)?;
+
+    // Verify we're calling our own program
+    if counter_program.key != program_id {
+        msg!("Error: Program ID mismatch");
+        return Err(ProgramError::IncorrectProgramId);
+    }
+
+    crate::codama_client::instructions::IncrementCounterCpiBuilder::new(counter_program)
+        .counter(counter_account)
+        .invoke()?;
+
     Ok(())
 }

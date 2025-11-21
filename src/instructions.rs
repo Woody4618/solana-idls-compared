@@ -11,9 +11,25 @@ pub enum CounterInstruction {
     #[codama(account(name = "counter", writable))]
     IncrementCounter,
 
-    /// CPI: Increment an Anchor counter from this native program
+    /// CPI: Increment an Anchor counter using Anchor's generated CPI client
     #[codama(account(name = "anchor_counter", writable))]
     #[codama(account(name = "anchor_authority", signer))]
     #[codama(account(name = "anchor_program"))]
     IncrementAnchorCounter,
+
+    /// CPI: Increment an Anchor counter using manual discriminator construction
+    #[codama(account(name = "anchor_counter", writable))]
+    #[codama(account(name = "anchor_authority", signer))]
+    #[codama(account(name = "anchor_program"))]
+    IncrementAnchorCounterRaw,
+
+    /// Self-CPI: Increment the native counter using Codama-style pattern
+    #[codama(account(name = "counter", writable))]
+    #[codama(account(name = "counter_program"))]
+    IncrementCounterSelfCpi,
+
+    /// Self-CPI: Increment using actual Codama-generated CPI client
+    #[codama(account(name = "counter", writable))]
+    #[codama(account(name = "counter_program"))]
+    IncrementCounterCodamaClient,
 }
