@@ -18,10 +18,6 @@ dist/
 .pnpm-debug.log*
 pnpm-lock.yaml
 
-# Build artifacts
-/clients/js/src/generated/
-/clients/rust/
-
 # macOS
 .DS_Store
 .AppleDouble

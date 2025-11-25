@@ -7,7 +7,7 @@
     "rust": [
       {
         "from": "@codama/renderers-rust",
-        "args": ["./clients/rust", { "crateFolder": "src" }]
+        "args": ["./clients/rust/src/generated", { "crateFolder": "clients/rust" }]
       }
     ]
   }

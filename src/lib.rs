@@ -7,12 +7,9 @@ pub use errors::*;
 pub use instructions::*;
 pub use state::*;
 
-// Include Codama-generated Rust client for CPI usage
-#[path = "../clients/rust/mod.rs"]
-pub mod codama_client;
-
 use solana_program::declare_id;
 declare_id!("4FE9JYc8rtvbHd3U7dmDVNhtvQdb7xwdLvRnHiHCs27w");
+
 
 pub use crate::ID as COUNTER_PROGRAM_ID;
 

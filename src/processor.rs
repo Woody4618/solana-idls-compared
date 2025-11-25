@@ -297,7 +297,7 @@ fn process_increment_counter_codama_client(
         return Err(ProgramError::IncorrectProgramId);
     }
 
-    crate::codama_client::instructions::IncrementCounterCpiBuilder::new(counter_program)
+    codama_client::instructions::IncrementCounterCpiBuilder::new(counter_program)
         .counter(counter_account)
         .invoke()?;
 

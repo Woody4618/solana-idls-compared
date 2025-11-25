@@ -24,6 +24,7 @@ solana-account-info = "2.3.0"
 solana-cpi = "2.2.1"
 num-derive = "0.4"
 num-traits = "0.2"
+codama-client = { path = "clients/rust" }
 
 [dev-dependencies]
 litesvm = "0.8.1"
